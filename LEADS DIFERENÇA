@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leads · Meta × CRM · Metrocasa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+<style>
+  :root{
+    --red:#E2231A;--red-deep:#A50F12;--red-soft:#FCE9E8;--gold:#C9A227;
+    --ink:#16161A;--ink-2:#3B3B42;--muted:#7A7A85;
+    --line:#E7E7EC;--surface:#FFFFFF;--bg:#F4F4F6;--bg-2:#ECECEF;
+    --good:#1B7A3D;--good-bg:#E7F6EC;--warn:#9A6212;--warn-bg:#FFF4E5;
+    --shadow:0 1px 2px rgba(0,0,0,.04),0 12px 32px -12px rgba(20,20,26,.18);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',system-ui,-apple-system,sans-serif;
+    background:radial-gradient(1200px 600px at 50% -200px, rgba(226,35,26,.08), transparent 70%),var(--bg);
+    color:var(--ink);-webkit-font-smoothing:antialiased;min-height:100vh;padding:24px 16px 56px}
+  .wrap{max-width:1180px;margin:0 auto}
+
+  header{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:18px}
+  .brand{display:flex;flex-direction:column;gap:2px}
+  .logo{font-family:'Sora',sans-serif;font-weight:800;font-size:26px;letter-spacing:-.03em;color:var(--ink);line-height:1}
+  .logo .plus{color:var(--red)}
+  .tagline{font-size:12px;color:var(--muted);font-weight:500;letter-spacing:.02em}
+  .title-block{text-align:right}
+  .title-block h1{font-family:'Sora',sans-serif;font-weight:700;font-size:20px;letter-spacing:-.02em;color:var(--ink-2)}
+  .title-block .sub{font-size:12.5px;color:var(--muted);margin-top:2px}
+
+  /* filtros */
+  .filters{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px;box-shadow:var(--shadow);margin-bottom:16px}
+  .frow{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap}
+  .fgroup{display:flex;flex-direction:column;gap:5px}
+  .fgroup label{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700}
+  .fgroup input[type=date]{height:40px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font-family:inherit;font-size:13.5px;color:var(--ink);background:var(--bg)}
+  .fgroup input[type=date]:focus{outline:none;border-color:var(--red);background:#fff}
+  .acct-chips{display:flex;gap:7px;flex-wrap:wrap}
+  .achip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 14px;font-size:12.5px;font-weight:600;color:var(--ink-2);cursor:pointer;transition:.14s;font-family:inherit}
+  .achip:hover{border-color:var(--red);color:var(--red)}
+  .achip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+  .achip.all.on{background:var(--red);border-color:var(--red)}
+  .fspacer{flex:1}
+  .refresh{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:#fff;border-radius:10px;height:40px;padding:0 14px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink-2);transition:.15s}
+  .refresh:hover{border-color:var(--red);color:var(--red)}
+  .refresh svg{width:16px;height:16px;stroke:currentColor;transition:transform .6s}
+  .refresh.spinning svg{transform:rotate(360deg)}
+  .src{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;font-weight:600;border-radius:999px;padding:6px 12px;white-space:nowrap}
+  .src .sdot{width:8px;height:8px;border-radius:50%}
+  .src.snap{background:var(--bg-2);color:var(--ink-2)}.src.snap .sdot{background:var(--muted)}
+  .src.live{background:var(--good-bg);color:var(--good)}.src.live .sdot{background:#27AE60}
+  .src.warn{background:var(--warn-bg);color:var(--warn)}.src.warn .sdot{background:#E0902F}
+
+  /* KPIs */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
+  .kpi{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--red)}
+  .kpi.crm::before{background:var(--ink)}.kpi.dif::before{background:var(--gold)}.kpi.rate::before{background:var(--good)}
+  .kpi .kl{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700}
+  .kpi .kv{font-family:'Sora',sans-serif;font-weight:700;font-size:27px;letter-spacing:-.02em;margin-top:7px;color:var(--ink);line-height:1}
+  .kpi .ks{font-size:12px;color:var(--ink-2);margin-top:7px}
+  .kpi .ks b{color:var(--red-deep)}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column}
+  .card-head{padding:16px 20px 4px;display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+  .card-head h3{font-family:'Sora',sans-serif;font-weight:700;font-size:15px;color:var(--ink);letter-spacing:-.01em}
+  .card-head .ch-sub{font-size:11.5px;color:var(--muted);font-weight:600}
+  .card-body{padding:12px 18px 18px}
+  .span2{grid-column:1 / -1}
+  .chart-h{position:relative;height:300px}
+  .chart-h.tall{height:340px}
+
+  table{width:100%;border-collapse:collapse}
+  thead th{text-align:right;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;padding:9px 14px;border-bottom:1px solid var(--line)}
+  thead th:first-child{text-align:left}
+  tbody td{padding:10px 14px;font-size:13.5px;border-top:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums}
+  tbody td:first-child{text-align:left;font-weight:600;color:var(--ink);font-family:'Sora',sans-serif}
+  tbody tr:hover{background:var(--red-soft)}
+  .pill{display:inline-block;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:700;font-family:'Sora',sans-serif}
+  .pill.g{background:var(--good-bg);color:var(--good)}.pill.a{background:var(--warn-bg);color:var(--warn)}.pill.r{background:var(--red-soft);color:var(--red-deep)}
+  tfoot td{padding:11px 14px;font-size:13.5px;text-align:right;border-top:2px solid var(--ink);font-family:'Sora',sans-serif;font-weight:700;font-variant-numeric:tabular-nums}
+  tfoot td:first-child{text-align:left}
+
+  .empty{padding:40px 20px;text-align:center;color:var(--muted)}
+  .empty b{display:block;color:var(--ink-2);font-family:'Sora',sans-serif;font-size:15px;margin-bottom:5px}
+
+  footer{margin-top:26px;text-align:center;font-size:11.5px;color:var(--muted);line-height:1.6}
+  footer b{color:var(--ink-2)}
+
+  @media (max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}}
+  @media (max-width:640px){body{padding:16px 10px 40px}.title-block{text-align:left}header{align-items:flex-start}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="logo">metrocasa<span class="plus">+</span></div>
+      <div class="tagline">Você + perto</div>
+    </div>
+    <div class="title-block">
+      <h1>Leads · Meta × CRM</h1>
+      <div class="sub">Diferença entre o que a Meta registra e o que chega no CRM, por dia</div>
+    </div>
+  </header>
+
+  <div class="filters">
+    <div class="frow">
+      <div class="fgroup"><label>De</label><input type="date" id="fDe"></div>
+      <div class="fgroup"><label>Até</label><input type="date" id="fAte"></div>
+      <div class="fgroup" style="flex:1;min-width:220px">
+        <label>Contas</label>
+        <div class="acct-chips" id="acctChips"></div>
+      </div>
+      <div class="fspacer"></div>
+      <button class="refresh" id="refresh" title="Buscar da planilha agora">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+        Atualizar
+      </button>
+      <span class="src snap" id="src"><span class="sdot"></span><span id="src-txt">—</span></span>
+    </div>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="grid">
+    <div class="card span2">
+      <div class="card-head"><h3>Evolução diária</h3><span class="ch-sub">Meta × CRM × diferença</span></div>
+      <div class="card-body"><div class="chart-h tall"><canvas id="chDaily"></canvas></div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h3>Meta × CRM por conta</h3><span class="ch-sub">soma do período</span></div>
+      <div class="card-body"><div class="chart-h"><canvas id="chAcct"></canvas></div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h3>Taxa de chegada no CRM</h3><span class="ch-sub">CRM ÷ Meta por conta</span></div>
+      <div class="card-body"><div class="chart-h"><canvas id="chRate"></canvas></div></div>
+    </div>
+
+    <div class="card span2">
+      <div class="card-head"><h3>Detalhe por dia</h3><span class="ch-sub" id="tbl-sub"></span></div>
+      <div class="card-body" id="tblWrap"></div>
+    </div>
+  </div>
+
+  <footer>
+    <b>Metrocasa · Marketing</b> — leitura ao vivo da planilha LEADS (colunas A:N).<br>
+    Diferença positiva = leads que a Meta registrou e ainda não constam no CRM. Novas contas com sufixo " META"/" CRM" entram sozinhas.
+  </footer>
+</div>
+
+<script>
+/* ===== CONFIG ===== */
+// Endpoint que lê a planilha sem precisar publicar (funciona se a planilha estiver
+// compartilhada como "qualquer pessoa com o link"). Se não carregar, publique a aba
+// LEADS na web como CSV e troque por esse link (.../d/e/2PACX-.../pub?gid=0&single=true&output=csv).
+const CSV_URL = "https://docs.google.com/spreadsheets/d/1UVo-G6uZCekdkaD-FiZ9viGt9pMeAZ4HSYF278y2dKY/gviz/tq?tqx=out:csv&gid=0";
+const POLL_MS = 180000; // atualiza sozinho a cada 3 min
+
+/* ===== fallback: 1ª linha conhecida (01/07/2026) ===== */
+const FALLBACK_CSV =
+`DATA,FACEBOOK-T1 META,FACEBOOK-T2 META,FACEBOOK-T3 META,FACEBOOK-T4 META,FACEBOOK-T5 META,FACEBOOK-T1 CRM,FACEBOOK-T2 CRM,FACEBOOK-T3 CRM,FACEBOOK-T4 CRM,FACEBOOK-T5 CRM,TOTAL META,TOTAL CRM,DIFERENÇA
+01/07/2026,190,381,195,137,17,123,290,91,58,9,920,571,349`;
+
+/* ===== util ===== */
+const $ = id => document.getElementById(id);
+const num = n => Math.round(n).toLocaleString('pt-BR');
+const pct1 = (n,t) => t? (n/t*100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'%' : '—';
+let charts = {};
+if(window.ChartDataLabels){ Chart.register(window.ChartDataLabels); Chart.defaults.set('plugins.datalabels',{display:false}); }
+let MODEL = {accounts:[], rows:[]};
+let FILT = {de:null, ate:null, accts:new Set()};
+
+function brNum(s){ if(typeof s==='number')return s;
+  s=String(s).replace(/%/g,'').replace(/\s/g,'').replace(/\./g,'').replace(',','.');
+  const n=parseFloat(s); return isNaN(n)?0:n; }
+
+function parseDate(s){
+  s=String(s).trim();
+  let m=s.match(/^Date\((\d+),(\d+),(\d+)/); if(m) return new Date(+m[1],+m[2],+m[3]);   // gviz (mês 0-based)
+  m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); if(m) return new Date(+m[3],+m[2]-1,+m[1]); // dd/mm/yyyy
+  m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); if(m) return new Date(+m[1],+m[2]-1,+m[3]);   // yyyy-mm-dd
+  const d=new Date(s); return isNaN(d)?null:d;
+}
+const iso = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const brDate = d => String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+
+/* ===== CSV ===== */
+function parseCSV(text){
+  const rows=[];let row=[],f='',q=false;
+  for(let i=0;i<text.length;i++){const c=text[i];
+    if(q){if(c==='"'){if(text[i+1]==='"'){f+='"';i++;}else q=false;}else f+=c;}
+    else{if(c==='"')q=true;else if(c===','){row.push(f);f='';}
+      else if(c==='\n'){row.push(f);rows.push(row);row=[];f='';}
+      else if(c==='\r'){}else f+=c;}}
+  if(f.length||row.length){row.push(f);rows.push(row);}
+  return rows;
+}
+
+/* ===== modelo: identifica contas pelos sufixos META/CRM ===== */
+function buildModel(grid){
+  if(!grid.length) return {accounts:[], rows:[]};
+  const head = grid[0].map(h=>String(h).trim());
+  const cols=[]; const acctSet=[];
+  head.forEach((h,i)=>{
+    if(i===0) return;
+    const U=h.toUpperCase();
+    if(U==='TOTAL META'||U==='TOTAL CRM'||U==='DIFERENÇA'||U==='DIFERENCA'||h==='') return;
+    let type=null,acct=null;
+    if(/\sMETA$/.test(U)){type='meta';acct=h.replace(/\s*META$/i,'').trim();}
+    else if(/\sCRM$/.test(U)){type='crm';acct=h.replace(/\s*CRM$/i,'').trim();}
+    if(type){cols.push({i,type,acct}); if(!acctSet.includes(acct))acctSet.push(acct);}
+  });
+  const rows=[];
+  for(let r=1;r<grid.length;r++){
+    const dcell=grid[r][0]; if(!dcell||!String(dcell).trim())continue;
+    const date=parseDate(dcell); if(!date)continue;
+    const data={}; acctSet.forEach(a=>data[a]={meta:0,crm:0});
+    let any=false;
+    cols.forEach(c=>{ const v=brNum(grid[r][c.i]); data[c.acct][c.type]+=v; if(v)any=true; });
+    if(!any) continue;
+    rows.push({date, dateStr:brDate(date), data});
+  }
+  rows.sort((a,b)=>a.date-b.date);
+  return {accounts:acctSet, rows};
+}
+
+/* ===== filtros ===== */
+function activeRows(){
+  const de=FILT.de, ate=FILT.ate;
+  return MODEL.rows.filter(r=> (!de||r.date>=de) && (!ate||r.date<=ate));
+}
+function activeAccts(){ return MODEL.accounts.filter(a=>FILT.accts.has(a)); }
+
+function rowTotals(r){
+  let meta=0,crm=0; activeAccts().forEach(a=>{meta+=r.data[a].meta;crm+=r.data[a].crm;});
+  return {meta,crm,dif:meta-crm};
+}
+
+/* ===== render ===== */
+function classFor(rate){ return rate>=0.7?'g':rate>=0.5?'a':'r'; }
+function colorFor(rate){ return rate>=0.7?'#1B7A3D':rate>=0.5?'#C9A227':'#E2231A'; }
+
+function render(){
+  const rows=activeRows(), accts=activeAccts();
+  let meta=0,crm=0; rows.forEach(r=>{const t=rowTotals(r);meta+=t.meta;crm+=t.crm;});
+  const dif=meta-crm, rate=meta?crm/meta:0;
+
+  $('kpis').innerHTML=`
+    <div class="kpi"><div class="kl">Leads Meta</div><div class="kv">${num(meta)}</div><div class="ks">registrados na Meta</div></div>
+    <div class="kpi crm"><div class="kl">Leads CRM</div><div class="kv">${num(crm)}</div><div class="ks">chegaram ao CRM</div></div>
+    <div class="kpi dif"><div class="kl">Diferença</div><div class="kv">${dif>=0?'':'+'}${num(Math.abs(dif))}${dif<0?' no CRM':''}</div><div class="ks">${dif>=0?'não chegaram ao CRM':'a mais no CRM que na Meta'}</div></div>
+    <div class="kpi rate"><div class="kl">Taxa de chegada</div><div class="kv">${pct1(crm,meta)}</div><div class="ks"><b>${pct1(dif>0?dif:0,meta)}</b> de perda</div></div>`;
+
+  // ---- gráfico diário ----
+  const labels=rows.map(r=>r.dateStr);
+  const mData=rows.map(r=>rowTotals(r).meta);
+  const cData=rows.map(r=>rowTotals(r).crm);
+  const dData=rows.map(r=>rowTotals(r).dif);
+  drawDaily(labels,mData,cData,dData);
+
+  // ---- por conta ----
+  const perAcct=accts.map(a=>{
+    let m=0,c=0; rows.forEach(r=>{m+=r.data[a].meta;c+=r.data[a].crm;});
+    return {a, meta:m, crm:c, rate:m?c/m:0};
+  });
+  drawAcct(perAcct);
+  drawRate(perAcct);
+
+  // ---- tabela ----
+  $('tbl-sub').textContent = rows.length+(rows.length===1?' dia':' dias')+' · '+accts.length+(accts.length===1?' conta':' contas');
+  if(!rows.length){ $('tblWrap').innerHTML=`<div class="empty"><b>Sem dados no filtro</b>Ajuste o período ou as contas selecionadas.</div>`; return; }
+  let body='';
+  rows.forEach(r=>{
+    const t=rowTotals(r), rt=t.meta?t.crm/t.meta:0;
+    body+=`<tr><td>${r.dateStr}</td><td>${num(t.meta)}</td><td>${num(t.crm)}</td>
+      <td>${t.dif>=0?'':'+'}${num(Math.abs(t.dif))}</td>
+      <td><span class="pill ${classFor(rt)}">${pct1(t.crm,t.meta)}</span></td></tr>`;
+  });
+  $('tblWrap').innerHTML=`<table>
+    <thead><tr><th>Data</th><th>Meta</th><th>CRM</th><th>Diferença</th><th>Chegada</th></tr></thead>
+    <tbody>${body}</tbody>
+    <tfoot><tr><td>Total</td><td>${num(meta)}</td><td>${num(crm)}</td><td>${dif>=0?'':'+'}${num(Math.abs(dif))}</td><td>${pct1(crm,meta)}</td></tr></tfoot>
+  </table>`;
+}
+
+function drawDaily(labels,m,c,d){
+  if(charts.daily)charts.daily.destroy();
+  const dl=labels.length<=12;
+  charts.daily=new Chart($('chDaily'),{data:{labels,datasets:[
+    {type:'bar',label:'Meta',data:m,backgroundColor:'#E2231A',borderRadius:5,order:2,
+      datalabels:{color:'#A50F12',anchor:'end',align:'end',font:{family:'Sora',weight:'700',size:10},formatter:v=>v?num(v):''}},
+    {type:'bar',label:'CRM',data:c,backgroundColor:'#16161A',borderRadius:5,order:2,
+      datalabels:{color:'#16161A',anchor:'end',align:'end',font:{family:'Sora',weight:'700',size:10},formatter:v=>v?num(v):''}},
+    {type:'line',label:'Diferença',data:d,borderColor:'#C9A227',backgroundColor:'#C9A227',borderWidth:2.5,tension:.3,pointRadius:4,pointBackgroundColor:'#C9A227',order:1,yAxisID:'y',
+      datalabels:{color:'#8A6D12',anchor:'end',align:'top',font:{family:'Sora',weight:'700',size:10.5},formatter:v=>num(v)}}
+  ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},layout:{padding:{top:16}},
+    plugins:{datalabels:{display:dl},legend:{position:'bottom',labels:{font:{family:'Inter',size:12},color:'#3B3B42',boxWidth:12,boxHeight:12,padding:12,usePointStyle:true}},
+      tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${num(c.parsed.y)}`}}},
+    scales:{x:{grid:{display:false},ticks:{font:{family:'Sora',size:11.5,weight:'600'},color:'#16161A'}},
+      y:{grid:{color:'#EEE'},ticks:{font:{family:'Inter',size:11},color:'#7A7A85'},beginAtZero:true,grace:'14%'}}}});
+}
+function drawAcct(list){
+  if(charts.acct)charts.acct.destroy();
+  charts.acct=new Chart($('chAcct'),{type:'bar',data:{labels:list.map(x=>x.a.replace(/^FACEBOOK-/,'')),
+    datasets:[{label:'Meta',data:list.map(x=>x.meta),backgroundColor:'#E2231A',borderRadius:4,
+        datalabels:{color:'#A50F12',anchor:'end',align:'end',font:{family:'Sora',weight:'700',size:11},formatter:v=>v?num(v):''}},
+      {label:'CRM',data:list.map(x=>x.crm),backgroundColor:'#16161A',borderRadius:4,
+        datalabels:{color:'#16161A',anchor:'end',align:'end',font:{family:'Sora',weight:'700',size:11},formatter:v=>v?num(v):''}}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,layout:{padding:{right:40}},
+      plugins:{datalabels:{display:true},legend:{position:'bottom',labels:{font:{family:'Inter',size:12},color:'#3B3B42',boxWidth:12,boxHeight:12,padding:10,usePointStyle:true}},
+        tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${num(c.parsed.x)}`}}},
+      scales:{x:{grid:{color:'#EEE'},ticks:{font:{family:'Inter',size:11},color:'#7A7A85'},beginAtZero:true,grace:'8%'},
+        y:{grid:{display:false},ticks:{font:{family:'Sora',size:12,weight:'600'},color:'#16161A'}}}}});
+}
+function drawRate(list){
+  if(charts.rate)charts.rate.destroy();
+  charts.rate=new Chart($('chRate'),{type:'bar',data:{labels:list.map(x=>x.a.replace(/^FACEBOOK-/,'')),
+    datasets:[{data:list.map(x=>+(x.rate*100).toFixed(1)),backgroundColor:list.map(x=>colorFor(x.rate)),borderRadius:5,
+      datalabels:{color:'#16161A',anchor:'end',align:'top',clamp:true,font:{family:'Sora',weight:'700',size:12},formatter:v=>v.toLocaleString('pt-BR')+'%'}}]},
+    options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
+      plugins:{datalabels:{display:true},legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed.y.toLocaleString('pt-BR')}% chegou ao CRM`}}},
+      scales:{x:{grid:{display:false},ticks:{font:{family:'Sora',size:12,weight:'600'},color:'#16161A'}},
+        y:{grid:{color:'#EEE'},ticks:{font:{family:'Inter',size:11},color:'#7A7A85',callback:v=>v+'%'},beginAtZero:true,suggestedMax:100,grace:'14%'}}}});
+}
+
+/* ===== filtros UI ===== */
+function buildFilters(){
+  // datas
+  const ds=MODEL.rows.map(r=>r.date);
+  const min=ds.length?new Date(Math.min(...ds)):new Date();
+  const max=ds.length?new Date(Math.max(...ds)):new Date();
+  $('fDe').min=$('fAte').min=iso(min); $('fDe').max=$('fAte').max=iso(max);
+  if(!FILT.de||FILT.de<min||FILT.de>max) FILT.de=min;
+  if(!FILT.ate||FILT.ate<min||FILT.ate>max) FILT.ate=max;
+  $('fDe').value=iso(FILT.de); $('fAte').value=iso(FILT.ate);
+  // contas (mantém seleção; novas contas entram marcadas)
+  MODEL.accounts.forEach(a=>{ if(![...FILT.accts].includes(a) && !FILT._touched) FILT.accts.add(a); });
+  if(!FILT._touched) FILT.accts=new Set(MODEL.accounts);
+  const allOn=MODEL.accounts.every(a=>FILT.accts.has(a));
+  let html=`<button class="achip all ${allOn?'on':''}" data-all>Todas</button>`;
+  MODEL.accounts.forEach(a=>{ html+=`<button class="achip ${FILT.accts.has(a)?'on':''}" data-a="${a}">${a.replace(/^FACEBOOK-/,'')}</button>`; });
+  $('acctChips').innerHTML=html;
+  $('acctChips').querySelectorAll('.achip').forEach(b=>{
+    b.onclick=()=>{
+      FILT._touched=true;
+      if(b.hasAttribute('data-all')){
+        if(MODEL.accounts.every(a=>FILT.accts.has(a))) FILT.accts.clear();
+        else FILT.accts=new Set(MODEL.accounts);
+      } else {
+        const a=b.getAttribute('data-a');
+        FILT.accts.has(a)?FILT.accts.delete(a):FILT.accts.add(a);
+      }
+      buildFilters(); render();
+    };
+  });
+}
+$('fDe').onchange=e=>{ FILT.de=parseDate(e.target.value); render(); };
+$('fAte').onchange=e=>{ FILT.ate=parseDate(e.target.value); render(); };
+
+/* ===== status + carga ===== */
+function setSrc(k,t){ $('src').className='src '+k; $('src-txt').textContent=t; }
+function apply(grid, live){
+  const m=buildModel(grid);
+  if(!m.accounts.length||!m.rows.length) return false;
+  MODEL=m; buildFilters(); render();
+  return true;
+}
+async function loadLive(){
+  $('refresh').classList.add('spinning');
+  try{
+    const res=await fetch(CSV_URL+(CSV_URL.includes('?')?'&':'?')+'_='+Date.now());
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const text=await res.text();
+    if(text.trim().startsWith('<'))throw new Error('planilha não acessível');
+    if(!apply(parseCSV(text),true)) throw new Error('sem linhas válidas');
+    setSrc('live','Ao vivo · '+new Date().toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}));
+  }catch(e){
+    setSrc('warn','Sem leitura ao vivo ('+e.message+') — exibindo dados iniciais');
+  }finally{ $('refresh').classList.remove('spinning'); }
+}
+
+// render inicial com fallback, depois tenta ao vivo e faz polling
+apply(parseCSV(FALLBACK_CSV),false);
+setSrc('snap','Dados iniciais (01/07)');
+$('refresh').onclick=loadLive;
+loadLive();
+setInterval(loadLive, POLL_MS);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) loadLive(); });
+</script>
+</body>
+</html>
