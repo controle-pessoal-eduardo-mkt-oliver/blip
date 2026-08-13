@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -47,6 +46,7 @@
   .chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 13px;font-size:12px;font-weight:600;color:var(--ink-2);cursor:pointer;transition:.14s;font-family:'Sora',sans-serif}
   .chip:hover{border-color:var(--red);color:var(--red)}.chip.on{background:var(--ink);border-color:var(--ink);color:#fff}.chip.all.on{background:var(--red);border-color:var(--red)}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin-bottom:15px}
   .card{background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);overflow:hidden}
   .card-head{padding:15px 18px 2px;display:flex;align-items:baseline;justify-content:space-between;gap:10px}
   .card-head h3{font-family:'Sora',sans-serif;font-weight:700;font-size:14.5px}.card-head .sub{font-size:11px;color:var(--muted);font-weight:600}
@@ -69,7 +69,7 @@
   .empty{padding:40px;text-align:center;color:var(--muted)}.empty b{display:block;color:var(--ink-2);font-family:'Sora',sans-serif;margin-bottom:5px;font-size:15px}
   .note{background:var(--warn-bg);border:1px solid #F0C97A;border-radius:12px;padding:12px 15px;font-size:12.5px;color:#6b4a12;margin-bottom:16px;line-height:1.5}
   footer{margin-top:22px;text-align:center;font-size:11px;color:var(--muted);line-height:1.7}footer b{color:var(--ink-2)}
-  @media (max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}}
+  @media (max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}.grid3{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -123,6 +123,8 @@ const num=n=>Math.round(n||0).toLocaleString('pt-BR');
 const pct=(n,t)=>t?(n/t*100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'%':'—';
 const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]/g,'');
 function brNum(s){if(typeof s==='number')return s;const m=String(s).replace(/[^\d,.-]/g,'').replace(/\.(?=\d{3}\b)/g,'').replace(',','.');const n=parseFloat(m);return isNaN(n)?0:n;}
+// extrai o TIPO da tipologia, removendo o número inicial (que é o estoque). "99 1D + OFFICE" -> "1D + OFFICE"
+function tipoTipo(s){const t=String(s||'').replace(/^\s*[\d.]+\s*/,'').trim();return t||'—';}
 const PAL=['#E2231A','#16161A','#C9A227','#6B7280','#A50F12','#E89A93','#3B3B42','#9AA0A6','#D65A52','#5C6470'];
 let CH={};
 if(window.ChartDataLabels){Chart.register(window.ChartDataLabels);Chart.defaults.set('plugins.datalabels',{display:false});}
@@ -222,9 +224,9 @@ function render(){
   // TABELA primeiro (nunca depende do Chart.js)
   const th=(k,l,r=true)=>`<th data-k="${k}" style="${r?'':'text-align:left'}">${esc(l)} ${sortKey===k?`<span class="ar">${sortDir<0?'▼':'▲'}</span>`:''}</th>`;
   let body='';rows.forEach(d=>{const vso=d.vso, cls=vso>=0.2?'g':vso>=0.1?'a':'r';
-    body+=`<tr><td>${esc(d.emp)}</td><td>${num(d.estoque)}</td><td>${esc(d.regiao||'—')}</td><td>${num(d.vendasJul)}</td><td><span class="pill ${cls}">${pct(d.vendasJul,d.estoque)}</span></td><td>${num(d.meta)}</td><td>${num(d.vendasAgo)}</td><td>${num(d.gap)}</td><td><span class="tag ${/PRODUC|SIM|ATIVO/i.test(d.ads)?'on':''}">${esc(d.ads||'—')}</span></td></tr>`;});
+    body+=`<tr><td>${esc(d.emp)}</td><td>${num(d.estoque)}</td><td>${esc(d.regiao||'—')}</td><td style="text-align:left">${esc(d.tipologia||'—')}</td><td>${num(d.vendasJul)}</td><td><span class="pill ${cls}">${pct(d.vendasJul,d.estoque)}</span></td><td>${num(d.meta)}</td><td>${num(d.vendasAgo)}</td><td>${num(d.gap)}</td><td><span class="tag ${/PRODUC|SIM|ATIVO/i.test(d.ads)?'on':''}">${esc(d.ads||'—')}</span></td></tr>`;});
   $('tblSub').textContent=`${rows.length} de ${DATA.length}`;
-  $('tbl').innerHTML=`<table><thead><tr>${th('emp','Empreendimento',false)}${th('estoque','Estoque')}<th style="text-align:left">Região</th>${th('vendasJul','Vd '+mesAnt)}${th('vso','VSO')}${th('meta','Meta ago')}${th('vendasAgo','Vd ago')}${th('gap','Gap')}<th style="text-align:left">Ads</th></tr></thead><tbody>${body}</tbody><tfoot><tr><td>Total</td><td>${num(tEst)}</td><td></td><td>${num(tJul)}</td><td>${pct(tJul,tEst)}</td><td>${num(tMeta)}</td><td>${num(tAgo)}</td><td>${num(tMeta-tAgo)}</td><td></td></tr></tfoot></table>`;
+  $('tbl').innerHTML=`<table><thead><tr>${th('emp','Empreendimento',false)}${th('estoque','Estoque')}<th style="text-align:left">Região</th><th style="text-align:left">Tipologia</th>${th('vendasJul','Vd '+mesAnt)}${th('vso','VSO')}${th('meta','Meta ago')}${th('vendasAgo','Vd ago')}${th('gap','Gap')}<th style="text-align:left">Ads</th></tr></thead><tbody>${body}</tbody><tfoot><tr><td>Total</td><td>${num(tEst)}</td><td></td><td></td><td>${num(tJul)}</td><td>${pct(tJul,tEst)}</td><td>${num(tMeta)}</td><td>${num(tAgo)}</td><td>${num(tMeta-tAgo)}</td><td></td></tr></tfoot></table>`;
   $('tbl').querySelectorAll('th[data-k]').forEach(h=>h.onclick=()=>{const k=h.getAttribute('data-k');if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=(k==='emp')?1:-1;}render();});
 
   // GRÁFICOS (isolados)
@@ -249,7 +251,7 @@ function render(){
     plugins:{legend:{display:false},tooltip:{callbacks:{
       title:c=>c[0].label,
       label:c=>cm.label+': '+cm.fmt(c.raw),
-      afterBody:c=>{const d=rows[c[0].dataIndex];return ['','Estoque: '+num(d.estoque),'Vd '+mesAnt+': '+num(d.vendasJul),'Vd ago: '+num(d.vendasAgo),'Meta ago: '+num(d.meta),'VSO: '+pct(d.vendasJul,d.estoque)];}
+      afterBody:c=>{const d=rows[c[0].dataIndex];return ['','Tipologia: '+(d.tipologia||'—'),'Cat. uso: '+(d.categoria||'—'),'Estoque: '+num(d.estoque),'Vd '+mesAnt+': '+num(d.vendasJul),'Vd ago: '+num(d.vendasAgo),'Meta ago: '+num(d.meta),'VSO: '+pct(d.vendasJul,d.estoque)];}
     }}},
     scales:{x:{beginAtZero:true,grid:{color:'#EEE'},ticks:{color:'#7A7A85'},grace:'8%'},
       y:{grid:{display:false},ticks:{font:{family:'Sora',size:10.5,weight:'600'},color:'#16161A',autoSkip:false,crossAlign:'far'}}}}});
