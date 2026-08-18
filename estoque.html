@@ -43,10 +43,12 @@
   .searchbar input{flex:1;border:none;outline:none;font-family:inherit;font-size:15px;background:transparent;color:var(--ink)}
   .searchbar input::placeholder{color:var(--muted)}
   .searchbar button{border:none;background:var(--bg-2);color:var(--ink-2);width:26px;height:26px;border-radius:50%;font-size:17px;line-height:1;cursor:pointer;flex:0 0 auto}
-  .filters{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;box-shadow:var(--shadow);margin-bottom:16px;display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap}
-  .fg{display:flex;flex-direction:column;gap:5px}
+  .filters{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:var(--shadow);margin-bottom:12px;display:flex;gap:14px;flex-wrap:wrap}
+  .fg{flex:1 1 180px;min-width:150px;display:flex;flex-direction:column;gap:6px}
   .fg label{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700}
-  .fg select{height:38px;border:1px solid var(--line);border-radius:10px;padding:0 11px;font-family:inherit;font-size:13px;background:var(--bg);min-width:150px}
+  .fg select{width:100%;height:40px;border:1px solid var(--line);border-radius:10px;padding:0 11px;font-family:inherit;font-size:13.5px;background:var(--bg);cursor:pointer}
+  .sortbar{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;box-shadow:var(--shadow);margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .sortbar .sortlabel{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;flex:0 0 auto}
   .chips{display:flex;gap:6px;flex-wrap:wrap}
   .chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 13px;font-size:12px;font-weight:600;color:var(--ink-2);cursor:pointer;transition:.14s;font-family:'Sora',sans-serif}
   .chip:hover{border-color:var(--red);color:var(--red)}.chip.on{background:var(--ink);border-color:var(--ink);color:#fff}.chip.all.on{background:var(--red);border-color:var(--red)}
@@ -95,8 +97,9 @@
   <div class="filters">
     <div class="fg"><label>Região</label><select id="fReg"><option value="">Todas</option></select></div>
     <div class="fg"><label>Anúncio Ads</label><select id="fAds"><option value="">Todos</option></select></div>
-    <div class="fg" style="flex:1"><label>Ordenar por</label><div class="chips" id="fSort"></div></div>
+    <div class="fg"><label>Tipologia</label><select id="fTip"><option value="">Todas</option></select></div>
   </div>
+  <div class="sortbar"><span class="sortlabel">Ordenar por</span><div class="chips" id="fSort"></div></div>
 
   <div class="grid2">
     <div class="card span2"><div class="card-head"><h3 id="barTitle">Ranking</h3><span class="sub" id="barSub"></span></div><div class="card-body"><div class="scroll"><div id="barWrap"><canvas id="cBar"></canvas></div></div><div class="barhint">Dica: os botões <b>Ordenar por</b> acima trocam a métrica do ranking.</div></div></div>
@@ -122,16 +125,28 @@ const SNAP=[
   {emp:"VILA CARRAO",estoque:114,tipologia:"114 1D + OFFICE",categoria:"56 HIS-1 / 58 HIS-2",regiao:"ZONA LESTE",vendasJul:27,ads:"EM PRODUÇÃO",meta:23,vendasAgo:1}
 ];
 let DATA=[...SNAP], src={k:'snap',t:'Snapshot da imagem (4 de N)'}, totalVendasAgo=12, dataRef="10/08/2026", mesAnt="Julho", partial=true;
-let sortKey='vendasJul', sortDir=-1, fReg='', fAds='', fBusca='';
+let sortKey='vendasJul', sortDir=-1, fReg='', fAds='', fBusca='', fTip='';
 
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 const num=n=>Math.round(n||0).toLocaleString('pt-BR');
 const pct=(n,t)=>t?(n/t*100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'%':'—';
+const fpct=r=>(r*100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';
+const LANCAMENTOS=0; // lançamentos no período — não há coluna na planilha; ajuste se passar a existir
 const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]/g,'');
 function brNum(s){if(typeof s==='number')return s;const m=String(s).replace(/[^\d,.-]/g,'').replace(/\.(?=\d{3}\b)/g,'').replace(',','.');const n=parseFloat(m);return isNaN(n)?0:n;}
 // extrai o TIPO da tipologia, removendo o número inicial (que é o estoque). "99 1D + OFFICE" -> "1D + OFFICE"
-function tipoTipo(s){const t=String(s||'').replace(/^\s*[\d.]+\s*/,'').trim();return t||'—';}
+// TIPOLOGIAS vem como "1D (98), 1D + OFFICE (10)": tipo + (quantidade), vários separados por vírgula.
+// Mantém o dígito inicial (1D = 1 dormitório) e remove só a quantidade entre parênteses.
+function tipoTipos(s){
+  return String(s||'')
+    .split(',')
+    .map(x=>x.replace(/\(.*?\)/g,'')        // remove "(quantidade)"
+             .replace(/\s*\+\s*/g,' + ')     // padroniza espaços do +
+             .replace(/\s+/g,' ').trim().toUpperCase())
+    .filter(Boolean);
+}
+function tipoTipo(s){return tipoTipos(s)[0]||'—';}
 const PAL=['#E2231A','#16161A','#C9A227','#6B7280','#A50F12','#E89A93','#3B3B42','#9AA0A6','#D65A52','#5C6470'];
 let CH={};
 if(window.ChartDataLabels){Chart.register(window.ChartDataLabels);Chart.defaults.set('plugins.datalabels',{display:false});}
@@ -196,8 +211,8 @@ const mk=el=>{el.innerHTML=`<defs><linearGradient id="lg" x1="0" y1="0" x2="1" y
 
 /* -------- filtros/ordenação -------- */
 const SORTS=[['vendasJul','Vendas '+`Jul`],['vendasAgo','Vendas ago'],['estoque','Estoque'],['meta','Meta ago'],['vso','VSO Jul'],['gap','Gap meta'],['emp','Nome']];
-function filtered(){const nq=fBusca?norm(fBusca):'';return DATA.filter(d=>(!fReg||d.regiao===fReg)&&(!fAds||d.ads===fAds)&&(!nq||norm(d.emp).includes(nq)));}
-function withCalc(d){const vso=d.estoque?d.vendasJul/d.estoque:0;return{...d,vso,gap:(d.meta||0)-(d.vendasAgo||0)};}
+function filtered(){const nq=fBusca?norm(fBusca):'';return DATA.filter(d=>(!fReg||d.regiao===fReg)&&(!fAds||d.ads===fAds)&&(!fTip||tipoTipos(d.tipologia).includes(fTip))&&(!nq||norm(d.emp).includes(nq)));}
+function withCalc(d){const oferta=(d.estoque||0)+(d.vendasJul||0)+LANCAMENTOS;const vso=oferta?d.vendasJul/oferta:0;return{...d,vso,oferta,gap:(d.meta||0)-(d.vendasAgo||0)};}
 function sorted(){const arr=filtered().map(withCalc);arr.sort((a,b)=>{let x=a[sortKey],y=b[sortKey];if(sortKey==='emp'){return (''+x).localeCompare(''+y,'pt')*sortDir;}return ((x||0)-(y||0))*sortDir;});return arr;}
 
 function render(){
@@ -208,8 +223,10 @@ function render(){
   // popular selects
   const regs=[...new Set(DATA.map(d=>d.regiao).filter(Boolean))].sort();
   const ads=[...new Set(DATA.map(d=>d.ads).filter(Boolean))].sort();
+  const tips=[...new Set(DATA.flatMap(d=>tipoTipos(d.tipologia)))].sort();
   $('fReg').innerHTML='<option value="">Todas</option>'+regs.map(r=>`<option ${r===fReg?'selected':''}>${esc(r)}</option>`).join('');
   $('fAds').innerHTML='<option value="">Todos</option>'+ads.map(a=>`<option ${a===fAds?'selected':''}>${esc(a)}</option>`).join('');
+  $('fTip').innerHTML='<option value="">Todas</option>'+tips.map(t=>`<option ${t===fTip?'selected':''}>${esc(t)}</option>`).join('');
   $('fSort').innerHTML=SORTS.map(([k,l])=>`<button class="chip ${sortKey===k?'on':''}" data-k="${k}">${esc(l)}</button>`).join('');
   $('fSort').querySelectorAll('.chip').forEach(b=>b.onclick=()=>{const k=b.getAttribute('data-k');if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=(k==='emp')?1:-1;}render();});
 
@@ -218,22 +235,23 @@ function render(){
   const tJul=rows.reduce((a,d)=>a+d.vendasJul,0);
   const tMeta=rows.reduce((a,d)=>a+(d.meta||0),0);
   const tAgo=rows.reduce((a,d)=>a+(d.vendasAgo||0),0);
-  const vsoTot=tEst?tJul/tEst:0;
+  const tOferta=rows.reduce((a,d)=>a+d.estoque+d.vendasJul+LANCAMENTOS,0);
+  const vsoTot=tOferta?tJul/tOferta:0;
 
   $('kpis').innerHTML=`
     <div class="kpi"><div class="kl">Estoque total</div><div class="kv">${num(tEst)}</div><div class="ks">${rows.length} empreend.</div></div>
     <div class="kpi good"><div class="kl">Vendas totais</div><div class="kv">${num(tJul+tAgo)}</div><div class="ks"><b>${num(tJul)}</b> jul + <b>${num(tAgo)}</b> ago</div></div>
     <div class="kpi ink"><div class="kl">Vendas ${esc(mesAnt)}</div><div class="kv">${num(tJul)}</div><div class="ks">mês fechado</div></div>
-    <div class="kpi gold"><div class="kl">VSO ${esc(mesAnt)}</div><div class="kv">${pct(tJul,tEst)}</div><div class="ks">velocidade de venda</div></div>
+    <div class="kpi gold"><div class="kl">VSO ${esc(mesAnt)}</div><div class="kv">${fpct(vsoTot)}</div><div class="ks">vendas ÷ oferta do período</div></div>
     <div class="kpi"><div class="kl">Vendas agosto</div><div class="kv">${num(tAgo)}</div><div class="ks">${partial?'<b>parcial</b> · ':''}${pct(tAgo,tMeta)} da meta</div></div>
     <div class="kpi good"><div class="kl">Meta agosto</div><div class="kv">${num(tMeta)}</div><div class="ks">faltam ${num(Math.max(tMeta-tAgo,0))}</div></div>`;
 
   // TABELA primeiro (nunca depende do Chart.js)
   const th=(k,l,r=true)=>`<th data-k="${k}" style="${r?'':'text-align:left'}">${esc(l)} ${sortKey===k?`<span class="ar">${sortDir<0?'▼':'▲'}</span>`:''}</th>`;
   let body='';rows.forEach(d=>{const vso=d.vso, cls=vso>=0.2?'g':vso>=0.1?'a':'r';
-    body+=`<tr><td>${esc(d.emp)}</td><td>${num(d.estoque)}</td><td>${esc(d.regiao||'—')}</td><td style="text-align:left">${esc(d.tipologia||'—')}</td><td>${num(d.vendasJul)}</td><td><span class="pill ${cls}">${pct(d.vendasJul,d.estoque)}</span></td><td>${num(d.meta)}</td><td>${num(d.vendasAgo)}</td><td>${num(d.gap)}</td><td><span class="tag ${/PRODUC|SIM|ATIVO/i.test(d.ads)?'on':''}">${esc(d.ads||'—')}</span></td></tr>`;});
+    body+=`<tr><td>${esc(d.emp)}</td><td>${num(d.estoque)}</td><td>${esc(d.regiao||'—')}</td><td style="text-align:left">${esc(d.tipologia||'—')}</td><td>${num(d.vendasJul)}</td><td><span class="pill ${cls}">${fpct(d.vso)}</span></td><td>${num(d.meta)}</td><td>${num(d.vendasAgo)}</td><td>${num(d.gap)}</td><td><span class="tag ${/PRODUC|SIM|ATIVO/i.test(d.ads)?'on':''}">${esc(d.ads||'—')}</span></td></tr>`;});
   $('tblSub').textContent=`${rows.length} de ${DATA.length}`;
-  $('tbl').innerHTML=`<table><thead><tr>${th('emp','Empreendimento',false)}${th('estoque','Estoque')}<th style="text-align:left">Região</th><th style="text-align:left">Tipologia</th>${th('vendasJul','Vd '+mesAnt)}${th('vso','VSO')}${th('meta','Meta ago')}${th('vendasAgo','Vd ago')}${th('gap','Gap')}<th style="text-align:left">Ads</th></tr></thead><tbody>${body}</tbody><tfoot><tr><td>Total</td><td>${num(tEst)}</td><td></td><td></td><td>${num(tJul)}</td><td>${pct(tJul,tEst)}</td><td>${num(tMeta)}</td><td>${num(tAgo)}</td><td>${num(tMeta-tAgo)}</td><td></td></tr></tfoot></table>`;
+  $('tbl').innerHTML=`<table><thead><tr>${th('emp','Empreendimento',false)}${th('estoque','Estoque')}<th style="text-align:left">Região</th><th style="text-align:left">Tipologia</th>${th('vendasJul','Vd '+mesAnt)}${th('vso','VSO')}${th('meta','Meta ago')}${th('vendasAgo','Vd ago')}${th('gap','Gap')}<th style="text-align:left">Ads</th></tr></thead><tbody>${body}</tbody><tfoot><tr><td>Total</td><td>${num(tEst)}</td><td></td><td></td><td>${num(tJul)}</td><td>${fpct(vsoTot)}</td><td>${num(tMeta)}</td><td>${num(tAgo)}</td><td>${num(tMeta-tAgo)}</td><td></td></tr></tfoot></table>`;
   $('tbl').querySelectorAll('th[data-k]').forEach(h=>h.onclick=()=>{const k=h.getAttribute('data-k');if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=(k==='emp')?1:-1;}render();});
 
   // GRÁFICOS (isolados)
@@ -258,7 +276,7 @@ function render(){
     plugins:{legend:{display:false},tooltip:{callbacks:{
       title:c=>c[0].label,
       label:c=>cm.label+': '+cm.fmt(c.raw),
-      afterBody:c=>{const d=rows[c[0].dataIndex];return ['','Tipologia: '+(d.tipologia||'—'),'Cat. uso: '+(d.categoria||'—'),'Estoque: '+num(d.estoque),'Vd '+mesAnt+': '+num(d.vendasJul),'Vd ago: '+num(d.vendasAgo),'Meta ago: '+num(d.meta),'VSO: '+pct(d.vendasJul,d.estoque)];}
+      afterBody:c=>{const d=rows[c[0].dataIndex];return ['','Tipologia: '+(d.tipologia||'—'),'Cat. uso: '+(d.categoria||'—'),'Estoque: '+num(d.estoque),'Vd '+mesAnt+': '+num(d.vendasJul),'Vd ago: '+num(d.vendasAgo),'Meta ago: '+num(d.meta),'VSO: '+fpct(d.vso!=null?d.vso:0)];}
     }}},
     scales:{x:{beginAtZero:true,grid:{color:'#EEE'},ticks:{color:'#7A7A85'},grace:'8%'},
       y:{grid:{display:false},ticks:{font:{family:'Sora',size:10.5,weight:'600'},color:'#16161A',autoSkip:false,crossAlign:'far'}}}}});
@@ -272,6 +290,7 @@ function donut(id,labels,data){const T=data.reduce((a,b)=>a+b,0);mkChart(id,{typ
 
 $('fReg').onchange=e=>{fReg=e.target.value;render();};
 $('fAds').onchange=e=>{fAds=e.target.value;render();};
+$('fTip').onchange=e=>{fTip=e.target.value;render();};
 $('fBusca').oninput=e=>{fBusca=e.target.value;$('fBuscaX').style.display=fBusca?'block':'none';render();};
 $('fBuscaX').onclick=()=>{fBusca='';$('fBusca').value='';$('fBuscaX').style.display='none';$('fBusca').focus();render();};
 
