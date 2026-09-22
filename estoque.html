@@ -104,7 +104,7 @@
   <div class="grid2">
     <div class="card span2"><div class="card-head"><h3 id="barTitle">Ranking</h3><span class="sub" id="barSub"></span></div><div class="card-body"><div class="scroll"><div id="barWrap"><canvas id="cBar"></canvas></div></div><div class="barhint">Dica: os botões <b>Ordenar por</b> acima trocam a métrica do ranking.</div></div></div>
     <div class="card"><div class="card-head"><h3>Estoque por região</h3></div><div class="card-body"><div class="chart-h"><canvas id="cReg"></canvas></div></div></div>
-    <div class="card"><div class="card-head"><h3>Vendas Julho por região</h3></div><div class="card-body"><div class="chart-h"><canvas id="cRegV"></canvas></div></div></div>
+    <div class="card"><div class="card-head"><h3>Vendas mês anterior por região</h3></div><div class="card-body"><div class="chart-h"><canvas id="cRegV"></canvas></div></div></div>
   </div>
 
   <div class="card"><div class="card-head"><h3>Detalhamento</h3><span class="sub" id="tblSub"></span></div><div class="card-body" id="tbl"></div></div>
@@ -124,7 +124,7 @@ const SNAP=[
   {emp:"PARQUE INDEPENDENCIA",estoque:96,tipologia:"96 1D + OFFICE",categoria:"7 NR / 62 HIS-1 / 27 HIS-2",regiao:"ZONA SUL",vendasJul:42,ads:"EM PRODUÇÃO",meta:19,vendasAgo:1},
   {emp:"VILA CARRAO",estoque:114,tipologia:"114 1D + OFFICE",categoria:"56 HIS-1 / 58 HIS-2",regiao:"ZONA LESTE",vendasJul:27,ads:"EM PRODUÇÃO",meta:23,vendasAgo:1}
 ];
-let DATA=[...SNAP], src={k:'snap',t:'Snapshot da imagem (4 de N)'}, totalVendasAgo=12, dataRef="10/08/2026", mesAnt="Julho", partial=true;
+let DATA=[...SNAP], src={k:'snap',t:'Snapshot da imagem (4 de N)'}, totalVendasAgo=12, dataRef="10/08/2026", mesAnt="mês anterior", mesAtu="mês atual", partial=true;
 let sortKey='vendasJul', sortDir=-1, fReg='', fAds='', fBusca='', fTip='';
 
 const $=id=>document.getElementById(id);
@@ -181,10 +181,10 @@ function fromTable(grid){
   const cCat=col(h=>h.includes('CATUSO')||h.includes('CATEGORIA'));
   const cReg=col(h=>h.includes('REGIAO'));
   const cTip=col(h=>h.includes('TIPOLOGIA'));
-  const cJul=col(h=>h.includes('VENDAS')&&h.includes('JULHO'));
+  const cJul=col(h=>h.includes('ANTERIOR')||(h.includes('VENDAS')&&h.includes('JULHO')));
   const cAds=col(h=>h.includes('ANUNCIO')||h.includes('ADS'));
   const cMeta=col(h=>h.includes('META'));
-  const cAgo=col(h=>h.includes('VENDAS')&&h.includes('AGOSTO')&&!h.includes('META'));
+  const cAgo=col(h=>(h.includes('ATUAL')&&!h.includes('META'))||(h.includes('VENDAS')&&h.includes('AGOSTO')&&!h.includes('META')));
   const out=[];
   for(let r=hi+1;r<H.length;r++){const row=H[r];if(!row)continue;
     const emp=(cEmp>=0?row[cEmp]:'').trim();
@@ -210,7 +210,7 @@ function fromTable(grid){
 const mk=el=>{el.innerHTML=`<defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E2231A"/><stop offset="1" stop-color="#A50F12"/></linearGradient><mask id="lm"><rect width="512" height="512" fill="black"/><g fill="white"><rect x="134" y="360" width="244" height="22" rx="8"/><rect x="150" y="306" width="58" height="70" rx="9"/><rect x="227" y="256" width="58" height="120" rx="9"/><rect x="304" y="196" width="58" height="180" rx="9"/><rect x="322" y="144" width="22" height="56" rx="7"/><rect x="305" y="157" width="56" height="22" rx="7"/></g></mask></defs><rect width="512" height="512" rx="115" fill="url(#lg)"/><rect width="512" height="512" fill="white" mask="url(#lm)"/>`;};
 
 /* -------- filtros/ordenação -------- */
-const SORTS=[['vendasJul','Vendas '+`Jul`],['vendasAgo','Vendas ago'],['estoque','Estoque'],['meta','Meta ago'],['vso','VSO Jul'],['gap','Gap meta'],['emp','Nome']];
+const SORTS=[['vendasJul','Vd ant.'],['vendasAgo','Vd atual'],['estoque','Estoque'],['meta','Meta atual'],['vso','VSO'],['gap','Gap meta'],['emp','Nome']];
 function filtered(){const nq=fBusca?norm(fBusca):'';return DATA.filter(d=>(!fReg||d.regiao===fReg)&&(!fAds||d.ads===fAds)&&(!fTip||tipoTipos(d.tipologia).includes(fTip))&&(!nq||norm(d.emp).includes(nq)));}
 function withCalc(d){const oferta=(d.estoque||0)+(d.vendasJul||0)+LANCAMENTOS;const vso=oferta?d.vendasJul/oferta:0;return{...d,vso,oferta,gap:(d.meta||0)-(d.vendasAgo||0)};}
 function sorted(){const arr=filtered().map(withCalc);arr.sort((a,b)=>{let x=a[sortKey],y=b[sortKey];if(sortKey==='emp'){return (''+x).localeCompare(''+y,'pt')*sortDir;}return ((x||0)-(y||0))*sortDir;});return arr;}
@@ -219,7 +219,7 @@ function render(){
   $('srcs').innerHTML=`<span class="src ${src.k}"><span class="d"></span>${esc(src.t)}</span>`+
     `<span class="src ${src.k==='live'&&DATA.length<ESPERADO?'warn':'snap'}"><span class="d"></span>${DATA.length}${src.k==='live'?' de '+ESPERADO:''} empreendimento(s)${src.k==='live'&&DATA.length<ESPERADO?' — faltam '+(ESPERADO-DATA.length):''}</span>`+
     (dataRef?`<span class="src snap"><span class="d"></span>Ref. ${esc(dataRef)}</span>`:'');
-  $('note').innerHTML=partial?`<div class="note"><b>Vendas de agosto ainda parciais.</b> O mês corrente sofre atraso de registro (as validadas chegam 5–7 dias depois). Por isso a leitura de velocidade usa <b>${esc(mesAnt)}</b> (mês fechado); "Vendas agosto" e "Gap meta" ainda vão subir.</div>`:'';
+  $('note').innerHTML=partial?`<div class="note"><b>Vendas do mês atual ainda parciais.</b> O mês corrente sofre atraso de registro (as validadas chegam 5–7 dias depois). Por isso a leitura de velocidade usa o <b>${esc(mesAnt)}</b> (fechado); "Vendas ${esc(mesAtu)}" e "Gap meta" ainda vão subir.</div>`:'';
   // popular selects
   const regs=[...new Set(DATA.map(d=>d.regiao).filter(Boolean))].sort();
   const ads=[...new Set(DATA.map(d=>d.ads).filter(Boolean))].sort();
@@ -240,18 +240,18 @@ function render(){
 
   $('kpis').innerHTML=`
     <div class="kpi"><div class="kl">Estoque total</div><div class="kv">${num(tEst)}</div><div class="ks">${rows.length} empreend.</div></div>
-    <div class="kpi good"><div class="kl">Vendas totais</div><div class="kv">${num(tJul+tAgo)}</div><div class="ks"><b>${num(tJul)}</b> jul + <b>${num(tAgo)}</b> ago</div></div>
+    <div class="kpi good"><div class="kl">Vendas totais</div><div class="kv">${num(tJul+tAgo)}</div><div class="ks"><b>${num(tJul)}</b> ant. + <b>${num(tAgo)}</b> atual</div></div>
     <div class="kpi ink"><div class="kl">Vendas ${esc(mesAnt)}</div><div class="kv">${num(tJul)}</div><div class="ks">mês fechado</div></div>
     <div class="kpi gold"><div class="kl">VSO ${esc(mesAnt)}</div><div class="kv">${fpct(vsoTot)}</div><div class="ks">vendas ÷ oferta do período</div></div>
-    <div class="kpi"><div class="kl">Vendas agosto</div><div class="kv">${num(tAgo)}</div><div class="ks">${partial?'<b>parcial</b> · ':''}${pct(tAgo,tMeta)} da meta</div></div>
-    <div class="kpi good"><div class="kl">Meta agosto</div><div class="kv">${num(tMeta)}</div><div class="ks">faltam ${num(Math.max(tMeta-tAgo,0))}</div></div>`;
+    <div class="kpi"><div class="kl">Vendas ${esc(mesAtu)}</div><div class="kv">${num(tAgo)}</div><div class="ks">${partial?'<b>parcial</b> · ':''}${pct(tAgo,tMeta)} da meta</div></div>
+    <div class="kpi good"><div class="kl">Meta ${esc(mesAtu)}</div><div class="kv">${num(tMeta)}</div><div class="ks">faltam ${num(Math.max(tMeta-tAgo,0))}</div></div>`;
 
   // TABELA primeiro (nunca depende do Chart.js)
   const th=(k,l,r=true)=>`<th data-k="${k}" style="${r?'':'text-align:left'}">${esc(l)} ${sortKey===k?`<span class="ar">${sortDir<0?'▼':'▲'}</span>`:''}</th>`;
   let body='';rows.forEach(d=>{const vso=d.vso, cls=vso>=0.2?'g':vso>=0.1?'a':'r';
     body+=`<tr><td>${esc(d.emp)}</td><td>${num(d.estoque)}</td><td>${esc(d.regiao||'—')}</td><td style="text-align:left">${esc(d.tipologia||'—')}</td><td>${num(d.vendasJul)}</td><td><span class="pill ${cls}">${fpct(d.vso)}</span></td><td>${num(d.meta)}</td><td>${num(d.vendasAgo)}</td><td>${num(d.gap)}</td><td><span class="tag ${/PRODUC|SIM|ATIVO/i.test(d.ads)?'on':''}">${esc(d.ads||'—')}</span></td></tr>`;});
   $('tblSub').textContent=`${rows.length} de ${DATA.length}`;
-  $('tbl').innerHTML=`<table><thead><tr>${th('emp','Empreendimento',false)}${th('estoque','Estoque')}<th style="text-align:left">Região</th><th style="text-align:left">Tipologia</th>${th('vendasJul','Vd '+mesAnt)}${th('vso','VSO')}${th('meta','Meta ago')}${th('vendasAgo','Vd ago')}${th('gap','Gap')}<th style="text-align:left">Ads</th></tr></thead><tbody>${body}</tbody><tfoot><tr><td>Total</td><td>${num(tEst)}</td><td></td><td></td><td>${num(tJul)}</td><td>${fpct(vsoTot)}</td><td>${num(tMeta)}</td><td>${num(tAgo)}</td><td>${num(tMeta-tAgo)}</td><td></td></tr></tfoot></table>`;
+  $('tbl').innerHTML=`<table><thead><tr>${th('emp','Empreendimento',false)}${th('estoque','Estoque')}<th style="text-align:left">Região</th><th style="text-align:left">Tipologia</th>${th('vendasJul','Vd ant.')}${th('vso','VSO')}${th('meta','Meta atual')}${th('vendasAgo','Vd atual')}${th('gap','Gap')}<th style="text-align:left">Ads</th></tr></thead><tbody>${body}</tbody><tfoot><tr><td>Total</td><td>${num(tEst)}</td><td></td><td></td><td>${num(tJul)}</td><td>${fpct(vsoTot)}</td><td>${num(tMeta)}</td><td>${num(tAgo)}</td><td>${num(tMeta-tAgo)}</td><td></td></tr></tfoot></table>`;
   $('tbl').querySelectorAll('th[data-k]').forEach(h=>h.onclick=()=>{const k=h.getAttribute('data-k');if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=(k==='emp')?1:-1;}render();});
 
   // GRÁFICOS (isolados)
@@ -259,9 +259,9 @@ function render(){
   // GRÁFICO: ranking por 1 métrica (a que está ordenada) — legível com muitos projetos
   const MET={
     vendasJul:{label:'Vendas '+mesAnt,color:'#E2231A',get:d=>d.vendasJul,fmt:v=>num(v)},
-    vendasAgo:{label:'Vendas agosto',color:'#16161A',get:d=>d.vendasAgo,fmt:v=>num(v)},
+    vendasAgo:{label:'Vendas '+mesAtu,color:'#16161A',get:d=>d.vendasAgo,fmt:v=>num(v)},
     estoque:{label:'Estoque',color:'#9AA0A6',get:d=>d.estoque,fmt:v=>num(v)},
-    meta:{label:'Meta agosto',color:'#1B7A3D',get:d=>d.meta,fmt:v=>num(v)},
+    meta:{label:'Meta '+mesAtu,color:'#1B7A3D',get:d=>d.meta,fmt:v=>num(v)},
     vso:{label:'VSO '+mesAnt,color:'#C9A227',get:d=>d.vso,fmt:v=>(v*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%'},
     gap:{label:'Gap meta',color:'#A50F12',get:d=>d.gap,fmt:v=>num(v)}
   };
@@ -276,7 +276,7 @@ function render(){
     plugins:{legend:{display:false},tooltip:{callbacks:{
       title:c=>c[0].label,
       label:c=>cm.label+': '+cm.fmt(c.raw),
-      afterBody:c=>{const d=rows[c[0].dataIndex];return ['','Tipologia: '+(d.tipologia||'—'),'Cat. uso: '+(d.categoria||'—'),'Estoque: '+num(d.estoque),'Vd '+mesAnt+': '+num(d.vendasJul),'Vd ago: '+num(d.vendasAgo),'Meta ago: '+num(d.meta),'VSO: '+fpct(d.vso!=null?d.vso:0)];}
+      afterBody:c=>{const d=rows[c[0].dataIndex];return ['','Tipologia: '+(d.tipologia||'—'),'Cat. uso: '+(d.categoria||'—'),'Estoque: '+num(d.estoque),'Vd '+mesAnt+': '+num(d.vendasJul),'Vd '+mesAtu+': '+num(d.vendasAgo),'Meta '+mesAtu+': '+num(d.meta),'VSO: '+fpct(d.vso!=null?d.vso:0)];}
     }}},
     scales:{x:{beginAtZero:true,grid:{color:'#EEE'},ticks:{color:'#7A7A85'},grace:'8%'},
       y:{grid:{display:false},ticks:{font:{family:'Sora',size:10.5,weight:'600'},color:'#16161A',autoSkip:false,crossAlign:'far'}}}}});
@@ -308,6 +308,13 @@ async function loadLive(){$('btnRefresh').classList.add('spinning');
 mk($('mk'));render();$('btnRefresh').onclick=loadLive;loadLive();
 setInterval(loadLive,POLL_MS);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadLive();});
+// Se o Chart.js não carregou pela CDN principal, tenta uma reserva e re-renderiza
+if(typeof Chart==='undefined'){
+  const s=document.createElement('script');
+  s.src='https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js';
+  s.onload=()=>{if(window.ChartDataLabels){try{Chart.register(window.ChartDataLabels);Chart.defaults.set('plugins.datalabels',{display:false});}catch(e){}}render();};
+  document.head.appendChild(s);
+}
 </script>
 </body>
 </html>
